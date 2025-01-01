@@ -1,0 +1,229 @@
+=head1 NAME
+
+App::PWC::Config - Configuration object for App::PWC
+
+=head1 SYNOPSIS
+
+    use App::PWC::Config;
+
+    my $conf = App::PWC::Config->new( path => "/path/to/pwc.yaml" );
+    $conf->read;
+
+    say $conf->repo('pwc'); # Location of pwc repository
+    say $conf->color(0);    # First color
+    say for $conf->colors;  # List of all colors (alias for $conf->color())
+
+    my $color_iter = $conf->color_iterator;
+    for my $data_set (@data_sets) {
+        my $color = $color_iter->(); # Will repeat colors if necessary
+    }
+
+=head1 DESCRIPTION
+
+This module provides the configuration for the L<App::PWC> system.
+
+To this class, the configuration is treated as read-only. Edit the
+YAML file directly in order to make configuration changes.
+
+=head1 CONSTRUCTOR
+
+=head2 new( %options )
+
+Creates a new configuration object. Optionally takes a path argument:
+
+    my $conf = App::PWC::Config->new( path => '/path/to/pwc.yaml');
+
+=head1 MAIN CONFIG
+
+=head2 repo( 'pwc' | 'pwc-club' )
+
+    my $pwc_repo_path = $conf->repo('pwc');
+
+Gets the path to the specified repository. This path will be converted
+to an absolute path, and is assumed to be a directory.
+
+=head2 dbfile
+
+Returns the path and filename of the SQLite database.
+
+=head1 LANGUAGES CONFIG
+
+This section handles the C<lang:> configuration.
+
+=head2 lang_score( $lang )
+
+Returns the score for a submission in C<$lang>. This language will be 
+converted to a canonical language first. If the language is not defined
+in the configuration file, we return a default score of 1 point.
+
+    my $score = $conf->lang_score('perl6'); # Returns 2
+
+
+=head2 canonical_lang( $lang )
+
+Returns the canonical name of C<$lang>, if C<$lang> is an alias, or 
+simply returns C<$lang> if it is already canonical, or does not exist
+in the configuration.
+
+For example, given the following C<lang:> config:
+
+    lang:
+        perl:   { aliases: [ perl5 ] }
+        raku:   { aliases: [ perl6 ] }
+
+The following would hold true:
+
+    $conf->canonical_lang('perl5') eq 'perl'; # perl5 is an alias of perl
+    $conf->canonical_lang('raku')  eq 'raku'; # raku is already canonical
+    $conf->canonical_lang('rust')  eq 'rust'; # Does not exist; default.
+
+
+=head2 extension_ok( $lang => $ext )
+
+Returns true if any of the following are true:
+
+=over 2
+
+=item *
+
+C<$ext> is one of the extensions listed for C<$lang>
+
+=item *
+
+C<$lang> does not list any extensions
+
+=item *
+
+C<$lang> is not defined in the config file
+
+=back
+
+In other words, by default, all extensions are allowed. However, if extensions
+are explicitly defined, only listed extensions will count.
+
+Given the following config:
+
+    lang:
+        perl:   { extensions: [ pl, p5 ] }
+        rust:   { }
+
+The following expressions would evaluate as shown:
+
+    $conf->extension_ok( perl => 'pl' );    # TRUE
+    $conf->extension_ok( perl => 'perl' );  # FALSE
+    $conf->extension_ok( rust => 'pdf' );   # TRUE
+    $conf->extension_ok( eiffel => 'doc' ); # TRUE
+
+
+=head2 blog_score
+
+Returns the predefined score for a blog post.
+
+
+=head1 LOGGING CONFIG
+
+This section includes all logging configuration as defined in the C<log:>
+section of the config file.
+
+
+=head2 log_level
+
+=head2 console_level
+
+Returns the B<text> representation of the I<minimum> log level for the log
+file, or the console log.
+
+
+=head2 log_strftime
+
+=head2 console_strftime
+
+Returns the L<POSIX> C<strftime()> format string for the log file, or console
+log.
+
+
+=head2 gzip_logs
+
+Returns TRUE if C<gzip_logs> is C<True> in the configuration. This will cause
+rotated log files to be gzipped using L<Compress::Zlib>.
+
+
+=head2 num_logs
+
+Returns the number of old log files to keep, in addition to the most recent
+rebuild log. If this number is set to 3, for example, after several runs, the
+following files would exist:
+
+    rebuild.log
+    rebuild.log.1.gz
+    rebuild.log.2.gz
+    rebuild.log.3.gz
+
+
+=head2 rebuild_log
+
+The path and filename of the base rebuild log. When the log files are rotated,
+a number will be appended, as shown in the C<num_logs> example, above.
+
+
+=head2 config_file
+
+The path and filename of the configuration file itself.
+
+
+=head1 COLORS CONFIG
+
+This section corresponds to the C<colors:> section of the config file.
+
+=head2 color( [ $color_num ] )
+
+=head2 colors
+
+    my $first_color = $conf->color(0);
+    my @all_colors = $conf->color;
+    @all_colors = $conf->colors; # Alias
+
+Returns one (or all) color strings from the configuration.
+
+The strings are returned as-is, and passed to the generation code.
+Therefore it is essential that the configuration never be generated
+or modified according to any untrusted (i.e., user) input.
+
+=head2 color_iterator
+
+    my $color_iterator = $conf->color_iterator;
+
+    for my $data_set (@data_sets) {
+        my $color = $color_iterator->();
+        ...
+    }
+
+Returns an iterator that will provide one color string at a time,
+starting with the first color. If the end of the colors is reached,
+it will restart at the first color, looping indefinitely.
+
+=head1 DIAGNOSTICS
+
+=head2 Errors
+
+This module C<croak()>s on error, such as nonexistent config file,
+or invalid arguments to one of the methods. You are advised to 
+use something like L<Try::Tiny> to catch errors.
+
+=head2 Warnings
+
+There are currently no warnings generated by this module. That may change in
+the future, and those warnings will be signaled via C<carp()>.
+
+=head1 AUTHOR
+
+B<Ryan Thompson> E<lt>rjt@cpan.orgE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2024 Ryan Thompson
+
+This program is free software; you can redistribute it
+and/or modify it under the same terms as Perl itself.
+
+L<http://dev.perl.org/licenses/artistic.html>

@@ -1,0 +1,54 @@
+=head1 NAME
+
+App::PWC - Main PWC app functionality
+
+=head1 VERSION
+
+Version 0.01
+
+=head1 SYNOPSIS
+
+    use App::PWC;
+
+    my $pwc = App::PWC->new;
+
+=head1 CONSTRUCTOR
+
+=head2 new()
+
+Creates a new L<App::PWC> object.
+
+=head1 SUBROUTINES/METHODS
+
+=head2 function1
+
+=cut
+
+=head1 SUPPORT
+
+=over 2
+
+=item
+
+L<https://github.com/rjt-pl/App-PWC/issues>: Issue tracker (bug
+reports and feature requests here)
+
+=item
+
+L<GitHub Repository|https://github.com/rjt-pl/App-PWC>: Patches
+welcome!
+
+=back
+
+=head1 AUTHOR
+
+B<Ryan Thompson> E<lt>rjt@cpan.orgE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2025 Ryan Thompson
+
+This program is free software; you can redistribute it
+and/or modify it under the same terms as Perl itself.
+
+L<http://dev.perl.org/licenses/artistic.html>

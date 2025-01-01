@@ -1,0 +1,76 @@
+---
+# pwc.yaml - App::PWC configuration
+#
+# This configuration is used by all of the App::PWC utilities and many of
+# the libraries. It is read by App::PWC::Config
+#
+# Ryan Thompson <rjt@cpan.org> 2024
+
+# Repository locations. They are expected to be cloned in these locations.
+repo:
+  pwc-club: ../perlweeklychallenge-club
+  pwc:      ../perlweeklychallenge
+
+# SQLite database location
+dbfile:     pwc.sqlite
+
+# Language definitions. It's not necessary to specify EVERY language here.
+# However, any language where aliases exist (e.g., perl/perl5, perl6/raku),
+# or where the extensions need to be specified, should be listed here.
+# Default score is 1 point, if not specified.
+lang:
+  perl:
+    aliases:      [ perl5 ]
+    extensions:   [ pl, p5, perl ]
+    score:        2
+  raku:
+    aliases:      [ perl6 ]
+    extensions:   [ p6, raku ]
+    score:        2
+
+  bash:           { extensions: [ bash, sh ] }
+
+# Blog files (according to a regular expression) will be read line per line,
+# and any URLs will be counted as blog posts for that user, in that week.
+blog:
+  file_regexp:    '^blog\d?\.txt$'
+  require_200:    True  # If true, URLs are rejected if not found/error/etc.
+  score:          2
+
+# Color palette used for charts
+# These colors are used in order, depending on how many colors are needed.
+# If more colors are needed than this, they will repeat.
+
+# Credit to the 'Lost Century' palette by CopheeMoth via lospec:
+# https://lospec.com/palette-list/lost-century
+color:
+  - 'rgb(209, 177, 135)'
+  - 'rgb(199, 123, 88)'
+  - 'rgb(174, 93, 64)'
+  - 'rgb(121, 68, 74)'
+  - 'rgb(75, 61, 68)'
+  - 'rgb(186, 145, 88)'
+  - 'rgb(146, 116, 65)'
+  - 'rgb(77, 69, 57)'
+  - 'rgb(119, 116, 59)'
+  - 'rgb(179, 165, 85)'
+  - 'rgb(210, 201, 165)'
+  - 'rgb(140, 171, 161)'
+  - 'rgb(75, 114, 110)'
+  - 'rgb(87, 72, 82)'
+  - 'rgb(132, 120, 117)'
+  - 'rgb(171, 155, 142)'
+
+# Logging
+log:
+  rebuild_log:      log/rebuild.log
+
+  # A new log is created for every rebuild. Keep this many old logs:
+  num_logs:         12  
+
+  # Minimum log level ( emerg, alert, crit, error, warn, notice, info, debug )
+  level:            info
+  console_level:    info
+
+  strftime:         '%FT%T%z'     # Log timestamp is more detailed
+  console_strftime: '%a %b %d %T'  # Console timestamp is abbreviated
