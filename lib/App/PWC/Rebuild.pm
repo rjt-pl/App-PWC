@@ -79,6 +79,8 @@ method _create_tables {
                 username        TEXT NOT NULL UNIQUE,
                 realname        TEXT NOT NULL,
                 is_guest        INTEGER,
+                member_score    INTEGER,
+                guest_score     INTEGER,
                 PRIMARY KEY("username")
             );
         },
@@ -102,16 +104,16 @@ method _rebuild_users {
     my $members = $users->members;
     $log->info('Rebuilding users');
     for my $username (sort keys %$members) {
-        my $sth = $dbh->prepare('INSERT INTO Users VALUES (?,?,?)');
+        my $sth = $dbh->prepare('INSERT INTO Users VALUES (?,?,?,?,?)');
         $log->debug(sprintf('Member %-24s | %s', $username, $members->{$username}));
-        $sth->execute($username, $members->{$username}, 0);
+        $sth->execute($username, $members->{$username}, 0, 0, 0);
     }
 
     my $guests = $users->guests;
     for my $username (sort keys %$guests) {
-        my $sth = $dbh->prepare('INSERT INTO Users VALUES (?,?,?)');
+        my $sth = $dbh->prepare('INSERT INTO Users VALUES (?,?,?,?,?)');
         $log->debug(sprintf('Guest  %-24s | %s', $username, $guests->{$username}));
-        #$sth->execute($username, $guests->{$username}, 1);
+        #$sth->execute($username, $guests->{$username}, 1, 0, 0);
     }
 
 }
@@ -130,6 +132,8 @@ method _rebuild_blogs_and_submissions {
     my $cwd  = getcwd; # Save previous directory
     my $base = File::Spec->rel2abs( $conf->repo('pwc-club') );
     my ($submissions, $blogs) = (0,0); # Count of submissions and blogs
+    my %score;  # $score{member}{ryan-thompson} == total perl, raku, blog points
+                # $score{guest}{ryan-thompson} == total other points
 
     chdir $base;
 
@@ -157,25 +161,48 @@ method _rebuild_blogs_and_submissions {
                         $week, $user, $lang, $conf->lang_score($lang), $_));
                 $submissions++;
                 $sub_sth->execute($user, $week, $lang, $_, $conf->lang_score($lang));
+                my $mem_guest = $conf->lang_score($lang) > 1 ? 'member' : 'guest';
+                $score{$mem_guest}{$user} += $conf->lang_score($lang);
 
             # Blog(s)
             } elsif (m!^blog[_-]?\d?.txt$! and $File::Find::dir =~ m!\./([^/]+)$!) {
+                my $username = $1;
                 my @urls = read_lines($_);
                 for (@urls) {
                     $log->info(sprintf($fmt,
-                            $week, $1, 'blog', $conf->blog_score, $_));
+                            $week, $username, 'blog', $conf->blog_score, $_));
                     $blog_sth->execute($1, 0+$week, $_, $conf->blog_score);
+                    $score{member}{$username} += $conf->blog_score;
                 }
                 $blogs++;
             }
         };
         find($wanted, '.');
 
+
         chdir($base);
     }
 
     $log->info(sprintf('Rebuilt. %d submissions, %d blogs', $submissions, $blogs));
+    $self->update_scores( %score );
     chdir $cwd;
 
     return 1;
+}
+
+method update_scores( %score ) {
+    for my $mem_guest ( qw< member guest > ) {
+        for my $user ( sort keys %{ $score{$mem_guest} } ) {
+            my $sth = $dbh->prepare(qq{
+                UPDATE      Users
+                    SET     ${mem_guest}_score = ?
+                    WHERE   username = ?
+            });
+            my $score = $score{$mem_guest}{$user};
+            $log->info(sprintf("Total %6s score for %16s = %4d",
+                        $mem_guest, $user, $score));
+            $sth->execute($score, $user);
+        }
+    }
+    $log->info('All scores updated');
 }
