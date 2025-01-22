@@ -1,0 +1,130 @@
+# pwc.yaml - App::PWC configuration
+#
+# This is the main configuration for the PWC application, including
+# the configuration for Dancer as well as application-specific
+# configuration.
+#
+# Ryan Thompson <rjt@cpan.org> 2024
+
+#
+# Application-specific settings
+#
+application:
+
+  # Repository locations. They are expected to be cloned in these locations.
+  repo:
+    pwc-club: ../perlweeklychallenge-club
+    pwc:      ../perlweeklychallenge
+
+  # SQLite database location
+  dbfile:     pwc.sqlite
+
+  # Language definitions. It's not necessary to specify EVERY language here.
+  # However, any language where aliases exist (e.g., perl/perl5, perl6/raku),
+  # or where the extensions need to be specified, should be listed here.
+  # Default score is 1 point, if not specified.
+  lang:
+    perl:
+      aliases:      [ perl5 ]
+      extensions:   [ pl, p5, perl ]
+      score:        2
+    raku:
+      aliases:      [ perl6 ]
+      extensions:   [ p6, raku ]
+      score:        2
+
+    bash:           { extensions: [ bash, sh ] }
+
+  # Blog files (according to a regular expression) will be read line per line,
+  # and any URLs will be counted as blog posts for that user, in that week.
+  blog:
+    file_regexp:    '^blog\d?\.txt$'
+    require_200:    True  # If true, URLs are rejected if not found/error/etc.
+    score:          2
+
+  # Color palette used for charts
+  # These colors are used in order, depending on how many colors are needed.
+  # If more colors are needed than this, they will repeat.
+
+  # Credit to the 'Lost Century' palette by CopheeMoth via lospec:
+  # https://lospec.com/palette-list/lost-century
+  color:
+    - 'rgb(209, 177, 135)'
+    - 'rgb(199, 123, 88)'
+    - 'rgb(174, 93, 64)'
+    - 'rgb(121, 68, 74)'
+    - 'rgb(75, 61, 68)'
+    - 'rgb(186, 145, 88)'
+    - 'rgb(146, 116, 65)'
+    - 'rgb(77, 69, 57)'
+    - 'rgb(119, 116, 59)'
+    - 'rgb(179, 165, 85)'
+    - 'rgb(210, 201, 165)'
+    - 'rgb(140, 171, 161)'
+    - 'rgb(75, 114, 110)'
+    - 'rgb(87, 72, 82)'
+    - 'rgb(132, 120, 117)'
+    - 'rgb(171, 155, 142)'
+
+
+#
+# Dancer configuration
+#
+
+# We use the log4perl logger for maximum flexibility.
+# In some cases you may want to substitute in Console to bypass it.
+logger:         log4perl
+
+# Log level. Possible values are core, info, debug, warning, error
+# core contains internal Dancer messages. Production should use warning.
+# Development should use info or debug.
+# log4perl.conf contains additional settings.
+log:            core
+
+startup_info:   false   # Console msg at startup with versions and env
+
+#
+# All of the settings below will most likely not need to change,
+# unless you are modifying the behavior of the app itself.
+# One exception is the log_level, below.
+#
+
+appname: "App::PWC"
+
+# The default layout to use for your application (located in
+# views/layouts/main.tt)
+layout: "main"
+
+# when the charset is set to UTF-8 Dancer2 will handle for you
+# all the magic of encoding and decoding. You should not care
+# about unicode within your app when this setting is set (recommended).
+charset: "UTF-8"
+
+# === Engines ===
+#
+# NOTE: All the engine configurations need to be under a single "engines:"
+# key.  If you uncomment engine configurations below, make sure to delete
+# all "engines:" lines except the first.  Otherwise, only the last
+# "engines:" block will take effect.
+
+# Template engine
+template: "template_toolkit"
+engines:
+  template:
+    template_toolkit:
+      # Note: start_tag and end_tag are regexes
+      start_tag: '[%'
+      end_tag:   '%]'
+
+# Session engine
+engines:
+  session:
+    Simple:
+      cookie_name: pwcstats.session
+
+  logger:
+    log4perl:
+        config_file:  log4perl.conf
+#       category:     "AppPWC"
+#    Console:        { log_level: error }
+#    File:           { log_level: info }

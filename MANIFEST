@@ -4,8 +4,18 @@ Changes
 Makefile.PL
 MANIFEST			This list of files
 MANIFEST.SKIP
+cpanfile
 
-config/pwc.yaml                 Default configuration
+# Configuration
+config.yml                      Default configuration
+log4perl.conf                   Logging configuration
+environments/development.yml    Development config overrides
+environments/production.yml     Production config overrides
+
+# Application
+bin/app.psgi                    Dancer2 app (use plackup)
+bin/pwc-rebuild                 Manual rebuild
+Dockerfile
 
 # Module code
 lib/App/PWC.pm
@@ -21,26 +31,45 @@ lib/App/PWC/Rebuild.pod
 lib/App/PWC/Stats.pod
 lib/App/PWC/Users.pod
 
+# Dancer2 static files
+public/404.html
+public/500.html
+public/dispatch.fcgi
+public/dispatch.cgi
+public/favicon.ico
+public/images/perldancer-bg.jpg
+public/images/perldancer.jpg
+public/javascripts/jquery.js
+public/css/style.css
+public/css/error.css
+
+# Dancer2 views (Template::Toolkit)
+views/index.tt
+views/layouts/main.tt
+
 # Test suite
-t/00-load.t
-t/manifest.t
-t/pod-coverage.t
-t/pod.t
+t/000-load.t
+t/001-index-route.t
 
-t/config/00-load.t
-t/config/01-read.t
-t/config/02-access.t
+t/01-config/00-load.t
+t/01-config/01-read.t
+t/01-config/02-access.t
 
-t/users/00-load.t
-t/users/01-read.t
+t/02-users/00-load.t
+t/02-users/01-read.t
 
-t/stats/00-load.t
-t/stats/01-read.t
+t/03-rebuild/00-load.t
+t/03-rebuild/01-constructor.t
+t/03-rebuild/02-drop_create.t
+t/03-rebuild/03-rebuild.t
 
-t/rebuild/00-load.t
-t/rebuild/01-constructor.t
-t/rebuild/02-drop_create.t
-t/rebuild/03-rebuild.t
+t/04-stats/00-load.t
+t/04-stats/01-read.t
+
+# Author tests. Use RELEASE_TESTING=1
+xt/manifest.t
+xt/pod-coverage.t
+xt/pod.t
 
 # Sample files used in tests
 t/sample/perlweeklychallenge-club/guests.json

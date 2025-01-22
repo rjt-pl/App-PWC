@@ -1,8 +1,7 @@
-#!perl -T
 use v5.38;
-use strict;
-use warnings;
 use Test2::V0;
+
+use App::PWC;
 
 ok lives { use App::PWC::Rebuild };
 

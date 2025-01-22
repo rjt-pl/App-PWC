@@ -1,5 +1,4 @@
-#!perl -T
-use 5.010;
+use v5.38;
 use strict;
 use warnings;
 use Test2::V0;

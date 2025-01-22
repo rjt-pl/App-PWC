@@ -1,0 +1,10 @@
+#!/usr/bin/env perl
+#
+# pwc-rebuild - Single process stats rebuild for PWC
+#
+# Ryan Thompson <i@ry.ca> 2025
+
+use v5.38;
+use App::PWC;
+use App::PWC::Rebuild;
+

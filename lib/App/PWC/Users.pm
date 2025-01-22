@@ -9,8 +9,8 @@ use File::Slurper   qw< read_text >;
 use Carp;
 
 field $conf        :param;
-field %guests      :reader;
-field %members     :reader;
+field $guests;     # :reader is >=5.40
+field $members;    # :reader is >=5.40 
 
 # Read the JSON files when the object is created
 ADJUST {
@@ -22,10 +22,12 @@ ADJUST {
 
         croak "$filename must contain a hash" if 'HASH' ne ref $hash;
 
-        %guests  = %$hash if $group eq 'guests';
-        %members = %$hash if $group eq 'members';
+        $guests  = $hash if $group eq 'guests';
+        $members = $hash if $group eq 'members';
     }
 
 }
 
-method realname($user) { $members{$user} // $guests{$user} }
+method realname($user) { $members->{$user} // $guests->{$user} }
+method guests()        { $guests  }
+method members()       { $members }

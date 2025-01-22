@@ -1,4 +1,3 @@
-#!perl -T
 use v5.38;
 use strict;
 use warnings;

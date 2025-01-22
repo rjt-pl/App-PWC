@@ -6,8 +6,7 @@ App::PWC::Config - Configuration object for App::PWC
 
     use App::PWC::Config;
 
-    my $conf = App::PWC::Config->new( path => "/path/to/pwc.yaml" );
-    $conf->read;
+    my $conf = App::PWC::Config->new( conf => config->{application} );
 
     say $conf->repo('pwc'); # Location of pwc repository
     say $conf->color(0);    # First color
@@ -27,11 +26,20 @@ YAML file directly in order to make configuration changes.
 
 =head1 CONSTRUCTOR
 
-=head2 new( %options )
+=head2 new( conf => $config_hashref )
 
-Creates a new configuration object. Optionally takes a path argument:
+Creates a new configuration object from the supplied HASH ref.
+This hashref normally comes from Dancer's own config:
 
-    my $conf = App::PWC::Config->new( path => '/path/to/pwc.yaml');
+    my $conf = App::PWC::Config->new( conf => config->{application} )
+
+However, you are free to supply your own hashref or modify Dancer's 
+configuration at runtime:
+
+    my $conf_hashref = config->{application};
+    $conf_hashref->{logger} = 'Console';
+
+    my $conf = App::PWC::Config->new( conf => $conf_hashref );
 
 =head1 MAIN CONFIG
 
@@ -118,57 +126,6 @@ The following expressions would evaluate as shown:
 =head2 blog_score
 
 Returns the predefined score for a blog post.
-
-
-=head1 LOGGING CONFIG
-
-This section includes all logging configuration as defined in the C<log:>
-section of the config file.
-
-
-=head2 log_level
-
-=head2 console_level
-
-Returns the B<text> representation of the I<minimum> log level for the log
-file, or the console log.
-
-
-=head2 log_strftime
-
-=head2 console_strftime
-
-Returns the L<POSIX> C<strftime()> format string for the log file, or console
-log.
-
-
-=head2 gzip_logs
-
-Returns TRUE if C<gzip_logs> is C<True> in the configuration. This will cause
-rotated log files to be gzipped using L<Compress::Zlib>.
-
-
-=head2 num_logs
-
-Returns the number of old log files to keep, in addition to the most recent
-rebuild log. If this number is set to 3, for example, after several runs, the
-following files would exist:
-
-    rebuild.log
-    rebuild.log.1.gz
-    rebuild.log.2.gz
-    rebuild.log.3.gz
-
-
-=head2 rebuild_log
-
-The path and filename of the base rebuild log. When the log files are rotated,
-a number will be appended, as shown in the C<num_logs> example, above.
-
-
-=head2 config_file
-
-The path and filename of the configuration file itself.
 
 
 =head1 COLORS CONFIG

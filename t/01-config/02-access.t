@@ -1,8 +1,16 @@
-#!perl -T
-
+use v5.38;
 use Test2::V0 -target => 'App::PWC::Config';
 
-my $conf = CLASS->new(config_file => 'config/pwc.yaml');
+# Stub application config
+my $conf_hash = {
+    repo => {
+        'pwc-club'  => '../perlweeklychallenge-club',
+        'pwc'       => '../perlweeklychallenge',
+    },
+    color => [ 'rgb(209,177,135)', 'rgb(199,123,88)' ],
+};
+
+my $conf = CLASS->new( conf => $conf_hash );
 
 # Check that config has some basic things we expect to see there.
 # Not necessary to validate ALL of the file, and better if we don't.

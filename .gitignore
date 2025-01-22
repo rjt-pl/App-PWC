@@ -5,4 +5,4 @@ Makefile.old
 *.sqlite-journal
 pm_to_blib
 blib/
-log/rebuild*
+log/
