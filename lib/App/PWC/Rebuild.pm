@@ -4,48 +4,34 @@ no warnings 'experimental';
 
 class App::PWC::Rebuild 0.01;
 
+use App::PWC::Users;
 use File::Slurper   qw< read_text read_lines >;
 use File::Find;
 use File::Spec;
-use DBI;
 use Carp;
 use Cwd;
-use App::PWC::Users;
 use Log::Log4perl;
+use JSON::PP        qw< decode_json >;
 use autodie;
 no warnings         'experimental'; # Yes, we need this twice.
 
 field $conf         :param;
-field $dbh;
 field $users;
 field $log;
+field $db;
 
 ADJUST {
-    $users = App::PWC::Users->new( conf => $conf );
     Log::Log4perl::init('log4perl.conf');
+    $db = App::PWC::DB->new( dbfile => $conf->dbfile );
     $log = Log::Log4perl->get_logger("app.pwc.rebuild");
-    $self->_connect;
-}
-
-# Connect to SQLite database
-method _connect() {
-    my $dbfile = $conf->dbfile;
-
-    $dbh = DBI->connect("dbi:SQLite:dbname=$dbfile", '', '');
 }
 
 method drop_tables() {
     $log->info('Dropping all SQL tables');
-    my $return = 1;
     for (qw<Blogs Submissions Users>) {
-        my $sth = $dbh->prepare("DROP TABLE IF EXISTS $_");
-        $sth->execute or do {
-            $log->error("Couldn't drop $_: " . $DBI::errstr);
-            $return = undef;
-        }
+        $db->query("DROP TABLE IF EXISTS $_") or _db_fatal("Can't drop $_");
     }
-
-    return $return;
+    return 1;
 }
 
 method rebuild() {
@@ -59,7 +45,6 @@ method rebuild() {
 # Create tables if needed (i.e., database does not yet exist)
 method _create_tables {
     my @sql = ( 
-        qq{ BEGIN TRANSACTION; },
         qq{ CREATE TABLE IF NOT EXISTS "Blogs" (
                 username        TEXT NOT NULL,
                 week            INTEGER NOT NULL,
@@ -84,47 +69,48 @@ method _create_tables {
                 PRIMARY KEY("username")
             );
         },
-        qq{ COMMIT; }
     );
 
-    $log->info('Creating tables if needed');
-    for (@sql) {
-        $log->info("   Creating $1") if /\"([^"]+)\"/;
-        my $sth = $dbh->prepare($_);
-        $sth->execute or do {
-            $log->error("Failed creating $1: $DBI::errstr");
-            return
-        }
-    }
+    $log->info('Creating tables if not exist');
+    $db->query($_) or _db_fatal("Can't create table") for @sql;
 
     1;
 }
 
 method _rebuild_users {
-    my $members = $users->members;
+    my ($members, $guests);
     $log->info('Rebuilding users');
-    for my $username (sort keys %$members) {
-        my $sth = $dbh->prepare('INSERT INTO Users VALUES (?,?,?,?,?)');
-        $log->debug(sprintf('Member %-24s | %s', $username, $members->{$username}));
-        $sth->execute($username, $members->{$username}, 0, 0, 0);
+
+    for my $group (qw< guests members >) {
+        my $filename = join '', $conf->repo('pwc-club'), '/', $group, '.json';
+        my $text     = read_text($filename);
+        my $hash     = decode_json $text;
+
+        croak "$filename must contain a hash" if 'HASH' ne ref $hash;
+
+        $guests  = $hash if $group eq 'guests';
+        $members = $hash if $group eq 'members';
     }
 
-    my $guests = $users->guests;
-    for my $username (sort keys %$guests) {
-        my $sth = $dbh->prepare('INSERT INTO Users VALUES (?,?,?,?,?)');
-        $log->debug(sprintf('Guest  %-24s | %s', $username, $guests->{$username}));
-        #$sth->execute($username, $guests->{$username}, 1, 0, 0);
+    # Look for duplicates and delete them from $guests with a warning
+    my @dupes = grep { exists $members->{$_} } keys %$guests;
+    if (@dupes) {
+        $log->warn("There are users who are both members and guests:");
+        $log->warn("   > $_") for sort @dupes;
+        delete $guests->{$_} for @dupes;
     }
 
+    my @rows = map { [ $_, $members->{$_}, 0, 0, 0 ] } sort keys %$members;
+    push @rows, map { [ $_, $guests->{$_}, 1, 0, 0 ] } sort keys %$guests;
+
+    $db->query('INSERT INTO Users VALUES (?,?,?,?,?)', @rows);
+
+    $users = App::PWC::Users->new( conf => $conf ); # Will load from DB
 }
 
 method _clear_tables() {
     $log->info('Clearing database tables');
-    for (qw< Users Blogs Submissions >) {
-        my $sth = $dbh->prepare("DELETE FROM $_");
-        $sth->execute;
-    }
-
+    $db->query("DELETE FROM $_") for qw< Users Blogs Submissions >;
 }
 
 # Walk the challenge-* directories and store everything in the database
@@ -143,8 +129,7 @@ method _rebuild_blogs_and_submissions {
         my ($week) = $rel_week_dir =~ /\-0*(\d+)$/;
         $log->info(sprintf("Week %3d | %s", $week, $rel_week_dir));
 
-        my $sub_sth  = $dbh->prepare('INSERT INTO Submissions VALUES (?,?,?,?,?)');
-        my $blog_sth = $dbh->prepare('INSERT INTO Blogs       VALUES (?,?,?,?)');
+        my (@subs, @blogs);
 
         my $wanted = sub {
             my $fmt = "[Wk%3d] %-20s | %10s | score:%1d | %s";
@@ -160,7 +145,7 @@ method _rebuild_blogs_and_submissions {
                 $log->info(sprintf($fmt,
                         $week, $user, $lang, $conf->lang_score($lang), $_));
                 $submissions++;
-                $sub_sth->execute($user, $week, $lang, $_, $conf->lang_score($lang));
+                push @subs, [$user, $week, $lang, $_, $conf->lang_score($lang)];
                 my $mem_guest = $conf->lang_score($lang) > 1 ? 'member' : 'guest';
                 $score{$mem_guest}{$user} += $conf->lang_score($lang);
 
@@ -171,7 +156,7 @@ method _rebuild_blogs_and_submissions {
                 for (@urls) {
                     $log->info(sprintf($fmt,
                             $week, $username, 'blog', $conf->blog_score, $_));
-                    $blog_sth->execute($1, 0+$week, $_, $conf->blog_score);
+                    push @blogs, [$1, 0+$week, $_, $conf->blog_score];
                     $score{member}{$username} += $conf->blog_score;
                 }
                 $blogs++;
@@ -179,6 +164,9 @@ method _rebuild_blogs_and_submissions {
         };
         find($wanted, '.');
 
+        $log->info("Adding $submissions submissions and $blogs blogs...");
+        $db->query('INSERT INTO Submissions VALUES (?,?,?,?,?)', @subs);
+        $db->query('INSERT INTO Blogs       VALUES (?,?,?,?)', @blogs);
 
         chdir($base);
     }
@@ -191,18 +179,17 @@ method _rebuild_blogs_and_submissions {
 }
 
 method update_scores( %score ) {
-    for my $mem_guest ( qw< member guest > ) {
-        for my $user ( sort keys %{ $score{$mem_guest} } ) {
-            my $sth = $dbh->prepare(qq{
-                UPDATE      Users
-                    SET     ${mem_guest}_score = ?
-                    WHERE   username = ?
-            });
-            my $score = $score{$mem_guest}{$user};
+    for my $which ( qw< member guest > ) {
+        my @param;
+        for my $user ( sort keys %{ $score{$which} } ) {
+            my $score = $score{$which}{$user};
             $log->info(sprintf("Total %6s score for %16s = %4d",
-                        $mem_guest, $user, $score));
-            $sth->execute($score, $user);
+                        $which, $user, $score));
+            push @param, [ $score, $user ];
         }
+        $db->query(qq{UPDATE Users SET ${which}_score = ? WHERE username = ? },
+            @param);
     }
+
     $log->info('All scores updated');
 }
