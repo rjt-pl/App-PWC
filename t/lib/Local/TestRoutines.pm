@@ -74,7 +74,8 @@ sub t_db_run_on_copy :prototype(&) {
     my ($code) = @_;
     my ($fb, $dbfile) = tempfile("pwc_XXXXX", SUFFIX => ".sqlite");
     copy( "$sample_base/read_tests.sqlite" => $dbfile );
-    $code->($dbfile)
+    $code->($dbfile);
+    unlink $dbfile;
 }
 
 1;
