@@ -1,9 +1,8 @@
 use v5.38;
 use Test2::V0 -target => 'App::PWC::Config';
+use lib qw< t/lib >;
+use Local::TestRoutines;
 
-my $conf;
-
-ok lives { $conf = CLASS->new( conf => { } ) },
-    'Constructor';
+ok lives { CLASS->new( conf => t_config() ) } => 'Constructor';
 
 done_testing;

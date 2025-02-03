@@ -1,25 +1,18 @@
 use v5.38;
 use Test2::V0 -target => 'App::PWC::Config';
+use lib qw< t/lib >;
+use Local::TestRoutines;
 
-# Stub application config
-my $conf_hash = {
-    repo => {
-        'pwc-club'  => '../perlweeklychallenge-club',
-        'pwc'       => '../perlweeklychallenge',
-    },
-    color => [ 'rgb(209,177,135)', 'rgb(199,123,88)' ],
-};
-
-my $conf = CLASS->new( conf => $conf_hash );
+my $conf = CLASS->new( conf => t_config );
 
 # Check that config has some basic things we expect to see there.
 # Not necessary to validate ALL of the file, and better if we don't.
-is   $conf->repo('pwc'), '../perlweeklychallenge';
-like $conf->color(0),    qr/^rgb\(/;
+is   $conf->repo('pwc')         => 't/sample/perlweeklychallenge';
+like $conf->color(0),qr/^rgb\(/ => 'First color is a color';
 
 my @colors = $conf->color;
-like $colors[0],    qr/^rgb\(/, 'First color is a color';
-ok   @colors > 1,   'Colors has more than one element';
+like $colors[0], qr/^rgb\(/     => 'First color is a color (array)';
+ok   @colors > 1                => 'Colors has more than one element';
 
 my $cit = $conf->color_iterator;
 my %seen;
@@ -32,7 +25,7 @@ for (1..1000) {
 }
 my $first_color = $conf->color(0);
 
-ok $seen{$first_color} > 1, 'We loop around';
-is $undefs, 0, 'No colors were undefined';
+ok $seen{$first_color} > 1      => 'We loop around';
+is $undefs, 0                   => 'All colors have defined values';
 
 done_testing;

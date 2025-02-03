@@ -35,7 +35,13 @@ ADJUST {
     $self->reload;
 }
 
-method get($username)  { $users->{$username} }
+method get($username, $clauses = {}) {
+    croak "\$clauses must be HASH ref. Got " . ref($clauses)
+        unless 'HASH' eq ref $clauses;
+    croak "\$clauses is unsupported" if keys %$clauses > 0;
+
+    $users->{$username}
+}
 
 method reload() {
     my @cols = qw< username realname is_guest member_score guest_score >;

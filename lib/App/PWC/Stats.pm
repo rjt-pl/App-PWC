@@ -6,22 +6,21 @@ class App::PWC::Stats 0.01;
 
 use JSON::PP        qw< decode_json >;
 use File::Slurper   qw< read_text >;
+use Log::Log4perl;
+use App::PWC::Users;
 use Carp;
 use DBI;
 
-field $conf :param;
+field $conf         :param;
+field $users;
+field $log;
+field $db;
 
 ADJUST {
-    $users = App::PWC::Users->new( conf => $conf );
     Log::Log4perl::init('log4perl.conf');
-    $log = Log::Log4perl->get_logger("app.pwc.stats");
-    $self->_connect;
-}
-
-# Connect to SQLite database
-method _connect() {
-    my $dbfile = $conf->dbfile;
-    $dbh = DBI->connect("dbi:SQLite:dbname=$dbfile", '', '');
+    $users = App::PWC::Users->new( conf => $conf );
+    $log   = Log::Log4perl->get_logger("app.pwc.stats");
+    $db    = App::PWC::DB->new( dbfile => $conf->dbfile );
 }
 
 # This is the basic chart generation routine, designed to be
@@ -40,13 +39,16 @@ method get_data( ) {
 #
 
 method top_users( $count = 50, $mem_guest = 'member' ) {
-    my $sth = $dbh->prepare(qq{
-        SELECT      username, realname, ${mem_guest}_score
-        FROM        Users
-        LIMIT       ?
-        ORDER BY    ${mem_guest}_score DESC
-    });
-    $sth->execute($count);
+    croak "\$mem_guest not members or guest" if $mem_guest !~ /^(member|guest)$/;
+    my $users = $users->users;
 
-    $sth->fetchall_arrayref;
+    my @top_count = sort {
+        ($mem_guest eq 'guest' ? $b->guest_score : $b->member_score)
+            <=>
+        ($mem_guest eq 'guest' ? $a->guest_score : $a->member_score)
+            ||
+        $a->username cmp $b->username
+    } keys %$users;
+
+    @top_count[0..$count-1];
 }

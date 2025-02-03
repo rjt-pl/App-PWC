@@ -6,8 +6,8 @@ use feature 'class';
 class App::PWC::Config 0.01;
 
 use YAML::PP;
-use File::Slurper qw< read_text write_text >;
-use List::Util qw< any all first >;
+use File::Slurper    qw< read_text write_text >;
+use List::Util       qw< any all first >;
 use Getopt::Long;
 use Pod::Usage;
 use Carp;
@@ -78,6 +78,33 @@ method dbfile()              { $conf->{dbfile} }
 #
 
 method _validate {
-    # TODO
-}
+    my @err;    # Accumulated errors, displayed all at once.
+    my @warn;   # Same goes for warnings
 
+    # Validate required tokens
+    for my $key (qw< repo.pwc-club repo.pwc dbfile lang.perl.score
+                     lang.raku.score blog.score >) {
+        my $cur = $conf;
+        my $path = '';
+        for my $token (split /\./, $key) {
+            $path .= ($path ? '.' : '') . $token;
+            if (not defined $cur->{$token}) {
+                push @err, "Missing required config parameter: $key";
+                last;
+            }
+            $cur = $cur->{$token};
+        }
+    }
+
+    push @err, "dbfile ". $self->dbfile . " does not exist"
+        if defined $self->dbfile and not -f $self->dbfile;
+
+    for (qw< pwc pwc-club >) {
+        push @err, "repo.$_ " . $self->repo($_) . " does not exist"
+            if defined $self->repo($_) and !-d $self->repo($_);
+    }
+
+    # Display any warnings and errors we've accumulated
+    cluck(join("\n   > ", 'Config warnings', @warn)) if @warn;
+    carp( join("\n   > ", 'Config errors:',  @err))  if @err;
+}

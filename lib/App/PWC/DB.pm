@@ -21,6 +21,8 @@ field $log;
 ADJUST {
     # Singleton pattern. These are only ever initialized once.
     state ($_log, $_dbh);
+    croak "dbfile is not defined" unless defined $dbfile;
+    croak "dbfile = $dbfile does not exist" unless -f $dbfile;
 
     if (not defined $_log) {
         Log::Log4perl::init('log4perl.conf');

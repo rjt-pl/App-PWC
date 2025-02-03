@@ -8,12 +8,7 @@ use File::Temp qw< tempfile >;
 
 my $dbfile = t_dbfile;
 
-my $conf_hash = {
-    repo   => { 'pwc-club' => 't/sample/perlweeklychallenge-club' },
-    dbfile => $dbfile,
-};
-
-my $conf = App::PWC::Config->new( conf => $conf_hash );
+my $conf = App::PWC::Config->new( conf => t_config );
 my $rebuild = CLASS()->new( conf => $conf );
 
 ok $rebuild->_create_tables     => 'Created tables';
